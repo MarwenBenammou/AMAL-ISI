@@ -1,0 +1,345 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+
+\usetikzlibrary{shapes,arrows,positioning,fit,backgrounds}
+
+% Configuration des en-têtes et pieds de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Architecture Microservices DeepSeek}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Styles pour les diagrammes
+\tikzstyle{microservice} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, draw=blue!80, fill=blue!20, font=\small]
+\tikzstyle{database} = [cylinder, shape border rotate=90, aspect=0.25, minimum width=2.5cm, minimum height=1cm, text centered, draw=green!80, fill=green!20, font=\small]
+\tikzstyle{api} = [rectangle, minimum width=3cm, minimum height=0.8cm, text centered, draw=orange!80, fill=orange!20, font=\small]
+\tikzstyle{external} = [rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm, text centered, draw=red!80, fill=red!20, font=\small]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+\title{\textbf{Architecture Microservices pour DeepSeek} \\ \large Système de Traitement d'Intelligence Artificielle Distribuée}
+\author{Architecture Technique}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+Cette architecture microservices pour DeepSeek présente un système distribué modulaire conçu pour traiter les requêtes d'intelligence artificielle de manière scalable et résiliente. L'architecture est basée sur des principes de séparation des responsabilités, d'indépendance des services, et de communication asynchrone.
+
+\section{Vue d'ensemble de l'Architecture}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
+
+% Layer 1: Client Layer
+\node (client) [external] at (0,6) {Client Applications};
+\node (web) [external] at (3,6) {Interface Web};
+\node (mobile) [external] at (6,6) {Application Mobile};
+
+% Layer 2: API Gateway
+\node (gateway) [api] at (3,4) {API Gateway};
+
+% Layer 3: Core Microservices
+\node (auth) [microservice] at (0,2) {Service\\Authentification};
+\node (model) [microservice] at (3,2) {Service\\Modèle IA};
+\node (chat) [microservice] at (6,2) {Service\\Chat};
+
+% Layer 4: Support Services
+\node (config) [microservice] at (0,0) {Service\\Configuration};
+\node (monitoring) [microservice] at (2,0) {Service\\Monitoring};
+\node (cache) [microservice] at (4,0) {Service\\Cache};
+\node (queue) [microservice] at (6,0) {Service\\Queue};
+
+% Layer 5: Data Layer
+\node (userdb) [database] at (0,-2) {Base\\Utilisateurs};
+\node (modeldb) [database] at (2,-2) {Base\\Modèles};
+\node (chatdb) [database] at (4,-2) {Base\\Conversations};
+\node (logdb) [database] at (6,-2) {Base\\Logs};
+
+% Connections
+\draw [arrow] (client) -- (gateway);
+\draw [arrow] (web) -- (gateway);
+\draw [arrow] (mobile) -- (gateway);
+
+\draw [arrow] (gateway) -- (auth);
+\draw [arrow] (gateway) -- (model);
+\draw [arrow] (gateway) -- (chat);
+
+\draw [arrow] (auth) -- (config);
+\draw [arrow] (monitoring) -- (modeldb);
+\draw [arrow] (model) -- (cache);
+\draw [arrow] (chat) -- (queue);
+
+\draw [arrow] (config) -- (userdb);
+\draw [arrow] (cache) -- (chatdb);
+\draw [arrow] (queue) -- (logdb);
+
+% Cross-service communications
+\draw [arrow, dashed, red] (model) -- (auth);
+\draw [arrow, dashed, red] (chat) -- (auth);
+
+\end{tikzpicture}
+\caption{Vue d'ensemble de l'architecture microservices DeepSeek}
+\label{fig:overview}
+\end{figure}
+
+\section{Composants Principaux}
+
+\subsection{API Gateway}
+L'API Gateway sert de point d'entrée unique pour toutes les requêtes externes. Il assure :
+\begin{itemize}
+\item Routage intelligent des requêtes
+\item Authentification et autorisation
+\item Limitation du taux de requêtes
+\item Transformation des protocoles
+\item Agrégation des réponses
+\end{itemize}
+
+\subsection{Service d'Authentification}
+Gère l'identité et l'accès des utilisateurs :
+\begin{itemize}
+\item Authentification JWT
+\item Gestion des sessions
+\item Contrôle d'accès basé sur les rôles (RBAC)
+\item Intégration avec des fournisseurs externes (OAuth)
+\end{itemize}
+
+\subsection{Service de Modèle IA}
+Cœur du système, responsable du traitement des modèles DeepSeek :
+\begin{itemize}
+\item Chargement dynamique des modèles
+\item Optimisation des requêtes
+\item Gestion de la mémoire GPU
+\item Mise à l'échelle automatique
+\end{itemize}
+
+\subsection{Service de Chat}
+Gère les conversations et interactions :
+\begin{itemize}
+\item Historique des conversations
+\item Gestion des contextes
+\item Streaming des réponses
+\item Personnalisation des interactions
+\end{itemize}
+
+\section{Architecture de Déploiement}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.9\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.2cm]
+
+% Kubernetes Cluster
+\node[draw, thick, rounded corners, minimum width=10cm, minimum height=6cm, label=above:Cluster Kubernetes] (cluster) {};
+
+% Namespaces
+\node[draw, dashed, minimum width=4cm, minimum height=2.5cm, above left=0.3cm and 0.3cm of cluster.center, label=above left:{\scriptsize Namespace Production}] (prod-ns) {};
+\node[draw, dashed, minimum width=4cm, minimum height=2.5cm, above right=0.3cm and 0.3cm of cluster.center, label=above right:{\scriptsize Namespace Staging}] (staging-ns) {};
+
+% Services in Production
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=0.8cm]prod-ns.center) {API Gateway};
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=0cm]prod-ns.center) {Auth Service};
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=-0.8cm]prod-ns.center) {Model Service};
+
+% Services in Staging
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=0.8cm]staging-ns.center) {API Gateway};
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=0cm]staging-ns.center) {Chat Service};
+\node[microservice, scale=0.6, font=\tiny] at ([yshift=-0.8cm]staging-ns.center) {Cache Service};
+
+% External components
+\node[database, below=of cluster, minimum width=2cm, font=\scriptsize] {Bases de Données\\Externes};
+\node[external, left=of cluster, minimum width=2cm, font=\scriptsize] {Load\\Balancer};
+\node[external, right=of cluster, minimum width=2cm, font=\scriptsize] {Service Mesh\\(Istio)};
+
+\end{tikzpicture}
+}
+\caption{Architecture de déploiement Kubernetes}
+\label{fig:deployment}
+\end{figure}
+
+\section{Flux de Données}
+
+\subsection{Traitement d'une Requête IA}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.5cm, auto]
+
+% Nodes
+\node[external] (user) {Utilisateur};
+\node[api, right=of user] (gateway) {API Gateway};
+\node[microservice, right=of gateway] (auth) {Auth Service};
+\node[microservice, below=of auth] (model) {Model Service};
+\node[microservice, below=of model] (cache) {Cache Service};
+\node[microservice, right=of model] (chat) {Chat Service};
+\node[database, below=of cache] (db) {Base de Données};
+
+% Flow arrows with labels
+\draw[arrow] (user) -- node[above] {1. Requête} (gateway);
+\draw[arrow] (gateway) -- node[above] {2. Validation} (auth);
+\draw[arrow] (auth) -- node[right] {3. Token valide} (model);
+\draw[arrow] (model) -- node[right] {4. Cache check} (cache);
+\draw[arrow] (cache) -- node[below] {5. Query DB} (db);
+\draw[arrow] (model) -- node[above] {6. Process} (chat);
+\draw[arrow, bend left=45] (chat) -- node[below right] {7. Réponse} (gateway);
+\draw[arrow, bend left=60] (gateway) -- node[below] {8. Résultat} (user);
+
+\end{tikzpicture}
+\caption{Flux de traitement d'une requête IA}
+\label{fig:dataflow}
+\end{figure}
+
+\section{Patterns et Technologies}
+
+\subsection{Patterns Architecturaux Utilisés}
+\begin{itemize}
+\item \textbf{Circuit Breaker} : Protection contre les défaillances en cascade
+\item \textbf{Bulkhead} : Isolation des ressources critiques
+\item \textbf{Saga} : Gestion des transactions distribuées
+\item \textbf{CQRS} : Séparation commande/requête pour les opérations complexes
+\item \textbf{Event Sourcing} : Traçabilité complète des événements
+\end{itemize}
+
+\subsection{Stack Technologique}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Composant} & \textbf{Technologie} \\
+\hline
+Orchestration & Kubernetes \\
+Service Mesh & Istio \\
+API Gateway & Kong / Envoy \\
+Messagerie & Apache Kafka \\
+Cache & Redis Cluster \\
+Base de données & PostgreSQL / MongoDB \\
+Monitoring & Prometheus + Grafana \\
+Logging & ELK Stack \\
+CI/CD & GitLab CI / Jenkins \\
+\hline
+\end{tabular}
+\caption{Stack technologique recommandée}
+\label{tab:techstack}
+\end{table}
+
+\section{Scalabilité et Performance}
+
+\subsection{Stratégies de Mise à l'Échelle}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
+
+% Auto-scaling diagram
+\node[microservice] (service1) at (0,0) {Service A};
+\node[microservice] (service2) at (2.5,0) {Service A};
+\node[microservice] (service3) at (5,0) {Service A};
+\node[draw, dashed, minimum width=4cm] (autoscaler) at (2.5,-2.5) {Horizontal Pod Autoscaler};
+
+\draw[arrow] (autoscaler) -- (service1);
+\draw[arrow] (autoscaler) -- (service2);
+\draw[arrow] (autoscaler) -- (service3);
+
+% Load balancer
+\node[api] (lb) at (2.5,2) {Load Balancer};
+\draw[arrow] (lb) -- (service1);
+\draw[arrow] (lb) -- (service2);
+\draw[arrow] (lb) -- (service3);
+
+% Metrics
+\node[external] (metrics) at (7,0) {Métriques CPU/Mémoire};
+\draw[arrow, dashed] (service3) -- (metrics);
+\draw[arrow, dashed] (metrics) -- (autoscaler);
+
+\end{tikzpicture}
+\caption{Stratégie de mise à l'échelle horizontale automatique}
+\label{fig:autoscaling}
+\end{figure}
+
+\section{Sécurité}
+
+\subsection{Mesures de Sécurité Implémentées}
+
+\begin{itemize}
+\item \textbf{Authentification forte} : OAuth 2.0 + OpenID Connect
+\item \textbf{Chiffrement} : TLS 1.3 pour toutes les communications
+\item \textbf{Isolation réseau} : Segmentation par namespace Kubernetes
+\item \textbf{Secrets management} : Vault ou Kubernetes Secrets
+\item \textbf{Scanning de vulnérabilités} : Intégration continue des images
+\item \textbf{Politique de réseau} : Firewall applicatif (WAF)
+\end{itemize}
+
+\section{Monitoring et Observabilité}
+
+\subsection{Architecture de Monitoring}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.85\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.8cm]
+
+% Services
+\node[microservice, minimum width=1.8cm, font=\scriptsize] (service1) {Service 1};
+\node[microservice, right=of service1, minimum width=1.8cm, font=\scriptsize] (service2) {Service 2};
+\node[microservice, right=of service2, minimum width=1.8cm, font=\scriptsize] (service3) {Service 3};
+
+% Monitoring stack
+\node[external, below=of service2, minimum width=2cm, font=\scriptsize] (prometheus) {Prometheus};
+\node[api, below=of prometheus, minimum width=1.8cm, font=\scriptsize] (grafana) {Grafana};
+\node[database, left=of grafana, minimum width=1.8cm, font=\scriptsize] (elasticsearch) {Elasticsearch};
+\node[external, right=of grafana, minimum width=1.8cm, font=\scriptsize] (alertmanager) {AlertManager};
+
+% Connections
+\draw[arrow, dashed] (service1) -- (prometheus);
+\draw[arrow, dashed] (service2) -- (prometheus);
+\draw[arrow, dashed] (service3) -- (prometheus);
+\draw[arrow] (prometheus) -- (grafana);
+\draw[arrow] (prometheus) -- (alertmanager);
+\draw[arrow] (service1) -- (elasticsearch);
+\draw[arrow] (service2) -- (elasticsearch);
+\draw[arrow] (service3) -- (elasticsearch);
+
+\end{tikzpicture}
+}
+\caption{Architecture de monitoring et observabilité}
+\label{fig:monitoring}
+\end{figure}
+
+\section{Plan de Déploiement}
+
+\subsection{Phases de Déploiement}
+\begin{enumerate}
+\item \textbf{Phase 1} : Infrastructure de base (Kubernetes, Service Mesh)
+\item \textbf{Phase 2} : Services fondamentaux (Auth, API Gateway)
+\item \textbf{Phase 3} : Services métier (Model, Chat)
+\item \textbf{Phase 4} : Services de support (Cache, Queue, Monitoring)
+\item \textbf{Phase 5} : Optimisation et mise à l'échelle
+\end{enumerate}
+
+\section{Conclusion}
+
+Cette architecture microservices pour DeepSeek offre une solution robuste, scalable et maintenir pour le traitement distribué de l'intelligence artificielle. L'approche modulaire permet une évolution indépendante de chaque composant tout en maintenant la cohérence globale du système.
+
+Les patterns architecturaux implémentés assurent la résilience et la performance, tandis que l'utilisation de technologies cloud-native garantit une intégration optimale avec les environnements modernes de déploiement.
+
+\end{document}
